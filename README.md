@@ -1,4 +1,4 @@
-[Description in English](#desc_eng)
+[Description in English](#description)
 
 # Описание
 
@@ -56,7 +56,7 @@ fuse-бит `CKDIV8` установлен в значение **NO** (такти
 
 ---
 
-# Description<a id="desc_eng"></a>
+# Description
 
 This repository contains schematic and MCU firmware source code for simple temperature-driven 12/24V fan speed controller.
 
