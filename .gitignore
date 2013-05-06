@@ -1,0 +1,16 @@
+# Object files
+*.o
+
+# Libraries
+*.lib
+*.a
+
+# Executables
+*.elf
+*.out
+*.app
+
+# AVR-specific
+*.lss
+*.map
+*.d
