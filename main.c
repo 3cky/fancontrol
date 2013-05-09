@@ -23,15 +23,17 @@
 /* Minimum PWM duty cycle (non-zero to prevent motor stall) */
 #define PWM_MIN 60
 
+/* Difference between motor start and stop temperatures, celsius */
+#define MOTOR_HYST_TEMP 5
 /* Motor start temperature, celsius */
 #define MOTOR_START_TEMP 40
 /* Motor stop temperature, celsius. Lower than start temperature to add some hysteresis */
-#define MOTOR_STOP_TEMP (MOTOR_START_TEMP - 5)
+#define MOTOR_STOP_TEMP (MOTOR_START_TEMP - MOTOR_HYST_TEMP)
 /* Motor full speed temperature, celsius. */
 #define MOTOR_FULL_TEMP 80
 
 /* ADC threshold for disconnected NTC thermistor. */
-#define ADC_THR_DISC 32
+#define ADC_THR_DISC 16
 /* ADC base threshold. */
 #define ADC_THR_BASE 512
 
@@ -41,33 +43,27 @@
 enum { MOTOR_OFF, MOTOR_ON };
 
 /* ADC shifted 8-bit value to temperature (celsius) lookup table */
-const uint8_t TEMPS[256] PROGMEM = { 25, 25, 25, 26, 26, 26, 26, 26, 26, 27, 27,
-		27, 27, 27, 28, 28, 28, 28, 28, 28, 29, 29, 29, 29, 29, 30, 30, 30, 30,
-		30, 30, 31, 31, 31, 31, 31, 32, 32, 32, 32, 32, 33, 33, 33, 33, 33, 34,
-		34, 34, 34, 34, 34, 35, 35, 35, 35, 35, 36, 36, 36, 36, 36, 37, 37, 37,
-		37, 37, 38, 38, 38, 38, 39, 39, 39, 39, 39, 40, 40, 40, 40, 40, 41, 41,
-		41, 41, 42, 42, 42, 42, 42, 43, 43, 43, 43, 44, 44, 44, 44, 44, 45, 45,
-		45, 45, 46, 46, 46, 46, 47, 47, 47, 47, 48, 48, 48, 48, 49, 49, 49, 49,
-		50, 50, 50, 50, 51, 51, 51, 52, 52, 52, 52, 53, 53, 53, 53, 54, 54, 54,
-		55, 55, 55, 56, 56, 56, 56, 57, 57, 57, 58, 58, 58, 59, 59, 59, 60, 60,
-		60, 61, 61, 61, 62, 62, 62, 63, 63, 64, 64, 64, 65, 65, 66, 66, 66, 67,
-		67, 68, 68, 68, 69, 69, 70, 70, 71, 71, 72, 72, 73, 73, 73, 74, 75, 75,
-		76, 76, 77, 77, 78, 78, 79, 79, 80, 81, 81, 82, 83, 83, 84, 85, 85, 86,
-		87, 88, 88, 89, 90, 91, 92, 93, 93, 94, 95, 96, 97, 98, 99, 101, 102,
-		103, 104, 105, 107, 108, 110, 111, 113, 114, 116, 118, 120, 122, 124,
-		127, 129, 132, 135, 139, 142, 146, 151, 156, 162, 169, 178, 189, 204,
-		227, 255 };
-
-volatile uint8_t motor_pwm;
+const uint8_t TEMPS[256] PROGMEM = { 25, 25, 26, 26, 26, 26, 26, 27, 27, 27, 27,
+		27, 28, 28, 28, 28, 28, 28, 29, 29, 29, 29, 29, 30, 30, 30, 30, 30, 30,
+		31, 31, 31, 31, 31, 32, 32, 32, 32, 32, 33, 33, 33, 33, 33, 33, 34, 34,
+		34, 34, 34, 35, 35, 35, 35, 35, 36, 36, 36, 36, 36, 37, 37, 37, 37, 37,
+		38, 38, 38, 38, 38, 39, 39, 39, 39, 40, 40, 40, 40, 40, 41, 41, 41, 41,
+		41, 42, 42, 42, 42, 43, 43, 43, 43, 43, 44, 44, 44, 44, 45, 45, 45, 45,
+		46, 46, 46, 46, 47, 47, 47, 47, 48, 48, 48, 48, 49, 49, 49, 49, 50, 50,
+		50, 50, 51, 51, 51, 51, 52, 52, 52, 53, 53, 53, 53, 54, 54, 54, 54, 55,
+		55, 55, 56, 56, 56, 57, 57, 57, 58, 58, 58, 58, 59, 59, 59, 60, 60, 60,
+		61, 61, 62, 62, 62, 63, 63, 63, 64, 64, 64, 65, 65, 66, 66, 66, 67, 67,
+		68, 68, 68, 69, 69, 70, 70, 71, 71, 72, 72, 73, 73, 73, 74, 74, 75, 76,
+		76, 77, 77, 78, 78, 79, 79, 80, 81, 81, 82, 82, 83, 84, 84, 85, 86, 87,
+		87, 88, 89, 90, 90, 91, 92, 93, 94, 95, 96, 97, 98, 99, 100, 101, 102,
+		103, 105, 106, 107, 109, 110, 112, 113, 115, 117, 119, 121, 123, 125,
+		128, 130, 133, 136, 139, 143, 147, 152, 157, 163, 170, 179, 190, 205,
+		228, 255 };
 
 volatile uint8_t motor_state = MOTOR_OFF;
 
-ISR(TIMER1_OVF_vect) {
-	OCR1B = motor_pwm;
-}
-
 ISR(ADC_vect) {
-	uint8_t temp;
+	uint8_t temp, motor_pwm;
 	uint16_t adc = ADC;
 	if (adc < ADC_THR_DISC) {
 		/* Looks like NTC thermistor is disconnected or broken,
@@ -99,6 +95,8 @@ ISR(ADC_vect) {
 			motor_pwm = 0;
 		}
 	}
+	/* Set PWM output */
+	OCR1B = motor_pwm;
 	/* Start next A/D conversion */
 	ADCSRA |= _BV(ADSC);
 }
@@ -111,8 +109,8 @@ void ioinit(void) {
 	/* Enable fast peripheral clock as Timer 1 clock source */
 	PLLCSR |= _BV(PCKE);
 
-	/* Start Timer 1 clocked at PCK/2 */
-	TCCR1 = _BV(CS11);
+	/* Start Timer 1 clocked at PCK */
+	TCCR1 = _BV(CS10);
 	/* Enable PWM mode on OC1B */
 	GTCCR = _BV(PWM1B) | _BV(COM1B1);
 	/* Set Timer 1 TOP value */
@@ -121,8 +119,6 @@ void ioinit(void) {
 	OCR1B = 0;
 	/* Enable OC1B as output, other pins are inputs */
 	DDRB = _BV(DDB4);
-	/* Enable Timer 1 overflow interrupt */
-	TIMSK = _BV(TOIE1);
 
 	/* Setup ADC: enable ADC, autotrigger mode, enable interrupt, prescaler CLK/128 */
 	ADCSRA = _BV(ADEN) | _BV(ADIE) | _BV(ADPS2) | _BV(ADPS1) | _BV(ADPS0);

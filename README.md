@@ -34,7 +34,7 @@
 
 Для измерения температуры и управления коэффициентом заполнения импульсов ШИМ используется управление по прерыванию.
 Используется тактирование таймера от имеющегося в составе МК умножителя частоты с ФАПЧ, частота ШИМ при этом
-составляет 62.5 кГц при тактировании от встроенного RC-генератора (8 МГц), что обеспечивает отсутствие
+составляет 125 кГц при тактировании от встроенного RC-генератора (8 МГц), что обеспечивает отсутствие
 модуляционного шума от электродвигателя вентилятора в звуковом диапазоне.
 
 В случае, если напряжение с делителя при измерении составит менее `ADC_THR_DISC`, управляющая программа считает, что произошел
@@ -47,8 +47,8 @@
 
 ## Прошивка
 
-При прошивке необходимо убедиться, что выбран внутренний RC-генератор (8 МГц), а также то, что
-fuse-бит `CKDIV8` установлен в значение **NO** (тактирование без использования предварительного делителя на 8).
+При прошивке необходимо убедиться, что фьюзы сконфигурированы таким образом, что 
+в качестве источника тактовой частоты выбран внутренний RC-генератор (8 МГц).
 
 # Контакты
 
@@ -85,7 +85,7 @@ driven using PWM duty cycle in range from `PWM_MIN` to `PWM_MAX` when `MOTOR_FUL
 temperature is reached.
 
 Both temperature measuring and PWM output control are interrupt-driven. Timer 1 used for PWM
-is clocked from internal PLL frequency multiplier, so PWM frequency is about 62.5 kHz for
+is clocked from internal PLL frequency multiplier, so PWM frequency is about 125 kHz for
 noise-free motor control.
 
 Software do checks for thermistor breakage. In case if ADC measurement result is
@@ -99,8 +99,7 @@ plugin installed.
 
 ## Firmware uploading
 
-Make sure fuses are configured for clocking from internal 8 MHz RC-oscillator with
-prescaler disabled (`CKDIV8` fuse should be set to **NO**).
+Make sure fuses are configured for clocking from internal 8 MHz RC-oscillator.
 
 ## Contacts
 
